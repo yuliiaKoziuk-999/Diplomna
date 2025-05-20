@@ -12,6 +12,8 @@ import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { TokenService } from './token/token.service';
 import { ChatroomModule } from './chatroom/chatroom.module';
 import { LiveChatroomModule } from './live-chatroom/live-chatroom.module';
+import { AiService } from './ai/ai.service';
+import { AiModule } from './ai/ai.module';
 const pubSub = new RedisPubSub({
   connection: {
     host: process.env.REDIS_HOST || 'localhost',
@@ -29,10 +31,11 @@ const pubSub = new RedisPubSub({
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/',
     }),
+    AiModule,
     AuthModule,
     UserModule,
     GraphQLModule.forRootAsync({
-      imports: [ConfigModule, AppModule],
+      imports: [ConfigModule],
       inject: [ConfigService],
       driver: ApolloDriver,
       useFactory: async (

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createWriteStream } from 'fs';
+import { BlockChainService } from 'src/blockchain/block-chain.service';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class ChatroomService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly blockchainService: BlockChainService,
   ) {}
 
   async getChatroom(id: string) {
@@ -20,9 +22,7 @@ export class ChatroomService {
 
   async createChatroom(name: string, sub: number) {
     const existingChatroom = await this.prisma.chatroom.findFirst({
-      where: {
-        name,
-      },
+      where: { name },
     });
     if (existingChatroom) {
       throw new BadRequestException({ name: 'Chatroom already exists' });
@@ -41,35 +41,30 @@ export class ChatroomService {
 
   async addUsersToChatroom(chatroomId: number, userIds: number[]) {
     const existingChatroom = await this.prisma.chatroom.findUnique({
-      where: {
-        id: chatroomId,
-      },
+      where: { id: chatroomId },
     });
     if (!existingChatroom) {
       throw new BadRequestException({ chatroomId: 'Chatroom does not exist' });
     }
 
     return await this.prisma.chatroom.update({
-      where: {
-        id: chatroomId,
-      },
+      where: { id: chatroomId },
       data: {
         users: {
-          connect: userIds.map((id) => ({ id: id })),
+          connect: userIds.map((id) => ({ id })),
         },
       },
       include: {
-        users: true, // Eager loading users
+        users: true,
       },
     });
   }
+
   async getChatroomsForUser(userId: number) {
     return this.prisma.chatroom.findMany({
       where: {
         users: {
-          some: {
-            id: userId,
-          },
+          some: { id: userId },
         },
       },
       include: {
@@ -77,8 +72,7 @@ export class ChatroomService {
           orderBy: {
             createdAt: 'desc',
           },
-        }, // Eager loading users
-
+        },
         messages: {
           take: 1,
           orderBy: {
@@ -88,28 +82,38 @@ export class ChatroomService {
       },
     });
   }
+
   async sendMessage(
     chatroomId: number,
     message: string,
     userId: number,
     imagePath: string,
   ) {
-    return await this.prisma.message.create({
+    const blockData = {
+      chatroomId,
+      userId,
+      message,
+      imagePath,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Додаємо блок у блокчейн
+    const newBlock = this.blockchainService.addBlock(blockData);
+
+    // Зберігаємо повідомлення в БД, включаючи хеш блоку
+    const savedMessage = await this.prisma.message.create({
       data: {
-        content: message,
-        imageUrl: imagePath,
         chatroomId,
         userId,
+        content: message,
+        imageUrl: imagePath,
+        createdAt: new Date(),
+        blockHash: newBlock.hash, // переконайся, що ця колонка є в схемі
       },
-      include: {
-        chatroom: {
-          include: {
-            users: true, // Eager loading users
-          },
-        }, // Eager loading Chatroom
-        user: true, // Eager loading User
-      },
+      include: { user: true, chatroom: { include: { users: true } } },
     });
+
+    return savedMessage;
   }
 
   async saveImage(image: {
@@ -136,8 +140,15 @@ export class ChatroomService {
 
     return imagePath;
   }
+
+  // async sForChatroom(chatroomId: number) {
+  //   return this.blockchainService
+  //     .getAll()
+  //     .filter((block) => block.data.chatroomId === chatroomId);
+  // }
+
   async getMessagesForChatroom(chatroomId: number) {
-    return await this.prisma.message.findMany({
+    const messages = await this.prisma.message.findMany({
       where: {
         chatroomId: chatroomId,
       },
@@ -154,13 +165,22 @@ export class ChatroomService {
         user: true, // Eager loading User
       },
     });
-  }
+    for (const msg of messages) {
+      const block = this.blockchainService.getBlockByHash(msg.blockHash);
 
+      if (!block || !this.blockchainService.validateBlockData(block, msg)) {
+        console.log(`!!Message integrity compromised for message ID ${msg.id}`);
+        throw new BadRequestException(
+          `Message integrity compromised for message ID ${msg.id}`,
+        );
+      }
+    }
+
+    return messages;
+  }
   async deleteChatroom(chatroomId: number) {
     return this.prisma.chatroom.delete({
-      where: {
-        id: chatroomId,
-      },
+      where: { id: chatroomId },
     });
   }
 }

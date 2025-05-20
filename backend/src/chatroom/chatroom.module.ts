@@ -4,6 +4,7 @@ import { ChatroomResolver } from './chatroom.resolver';
 import { PrismaService } from 'src/prisma.service';
 import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
+import { BlockChainService } from 'src/blockchain/block-chain.service';
 
 @Module({
   providers: [
@@ -12,6 +13,7 @@ import { JwtService } from '@nestjs/jwt';
     PrismaService,
     UserService,
     JwtService,
+    BlockChainService,
   ],
 })
 export class ChatroomModule {}
