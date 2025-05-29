@@ -247,6 +247,8 @@ function Chatwindow() {
   );
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (data?.getMessagesForChatroom) {
       setMessages(data.getMessagesForChatroom);
@@ -254,24 +256,32 @@ function Chatwindow() {
   }, [data?.getMessagesForChatroom]);
 
   const handleSendMessage = async () => {
-    await sendMessage({
-      variables: {
-        chatroomId: chatroomId,
-        content: messageContent,
-        image: selectedFile,
-      },
-      refetchQueries: [
-        {
-          query: GET_CHATROOMS_FOR_USER,
-          variables: {
-            userId: userId,
-          },
+    try {
+      await sendMessage({
+        variables: {
+          chatroomId: chatroomId,
+          content: messageContent,
+          image: selectedFile,
         },
-      ],
-    });
-    setMessageContent("");
-    setSelectedFile(null);
+        refetchQueries: [
+          {
+            query: GET_CHATROOMS_FOR_USER,
+            variables: {
+              userId: userId,
+            },
+          },
+        ],
+      });
+
+      setMessageContent("");
+      setSelectedFile(null);
+      setErrorMessage(null); // очищення при успішному надсиланні
+    } catch (error) {
+      console.error("Помилка при надсиланні:", error);
+      setErrorMessage("Ваше повідомлення не прийнятне");
+    }
   };
+
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
       console.log("Scrolling to bottom");
@@ -285,6 +295,9 @@ function Chatwindow() {
   };
   useEffect(() => {
     if (data?.getMessagesForChatroom) {
+      console.log(
+        JSON.stringify(data.getMessagesForChatroom) + "Data messages from chat",
+      );
       const uniqueMessages = Array.from(
         new Set(data.getMessagesForChatroom.map(m => m.id)),
       ).map(id => data.getMessagesForChatroom.find(m => m.id === id));
@@ -302,12 +315,14 @@ function Chatwindow() {
 
   useEffect(() => {
     scrollToBottom();
+    console.log(JSON.stringify(dataSub) + "dataSub");
     if (dataSub?.newMessage) {
       if (!messages.find(m => m.id === dataSub.newMessage?.id)) {
         setMessages(prevMessages => [...prevMessages, dataSub.newMessage!]);
       }
     }
   }, [dataSub?.newMessage, messages]);
+
   const isMediumDevice = useMediaQuery("(max-width: 992px)");
   return (
     <Flex
@@ -461,6 +476,15 @@ function Chatwindow() {
                   align='center'
                   justify={"center"}
                 >
+                  {errorMessage && (
+                    <Text
+                      color='red'
+                      size='xs'
+                      style={{ marginTop: 4, marginLeft: 8, padding: 10 }}
+                    >
+                      Ваше повідомлення не прийнятне
+                    </Text>
+                  )}
                   <Flex {...getRootProps()} align='center'>
                     {selectedFile && (
                       <Image
@@ -475,12 +499,15 @@ function Chatwindow() {
                     <Button leftIcon={<IconMichelinBibGourmand />}></Button>
                     <input {...getInputProps()} />
                   </Flex>
+
                   <TextInput
                     onKeyDown={handleUserStartedTyping}
                     style={{ flex: 0.7 }}
                     value={messageContent}
                     onChange={e => setMessageContent(e.currentTarget.value)}
                     placeholder='Type your message...'
+                    error={!!errorMessage} // підсвічує червоним
+                    // description={errorMessage || undefined} // текст під інпутом
                     rightSection={
                       <Button
                         onClick={handleSendMessage}
