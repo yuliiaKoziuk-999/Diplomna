@@ -193,7 +193,7 @@ export class ChatroomService {
         const aiMessage = await this.prisma.message.create({
           data: {
             chatroomId,
-            userId: 0, // AI user ID
+            userId: 100001, // AI user ID
             content: aiResponse,
             imageUrl: '',
             createdAt: new Date(),
