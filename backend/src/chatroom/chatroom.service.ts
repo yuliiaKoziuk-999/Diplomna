@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
 export class ChatroomService {
+  private aiUserId = 100001;
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
@@ -41,7 +42,7 @@ export class ChatroomService {
               id: sub,
             },
             {
-              id: 0,
+              id: this.aiUserId,
             },
           ],
         },
@@ -134,7 +135,7 @@ export class ChatroomService {
     userId: number,
     imagePath: string,
   ) {
-    let isAnomaly = await this.anomalyService.isAnomalous(message);
+    const isAnomaly = await this.anomalyService.isAnomalous(message);
     if (isAnomaly) {
       throw new BadRequestException(`Your message is anomaly`);
     }
@@ -182,7 +183,7 @@ export class ChatroomService {
       // Додаємо відповідь AI як повідомлення
       const aiBlockData = {
         chatroomId,
-        userId: 0, // ID системного користувача (AI)
+        userId: this.aiUserId, // ID системного користувача (AI)
         message: aiResponse,
         imagePath: '',
         timestamp: new Date().toISOString(),
@@ -193,7 +194,7 @@ export class ChatroomService {
         const aiMessage = await this.prisma.message.create({
           data: {
             chatroomId,
-            userId: 100001, // AI user ID
+            userId: this.aiUserId, // AI user ID
             content: aiResponse,
             imageUrl: '',
             createdAt: new Date(),
