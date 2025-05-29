@@ -1,3 +1,4 @@
+import { PrismaService } from 'src/prisma.service';
 import { Block } from './block';
 import { mineBlock } from './mineBlock';
 import { Injectable } from '@nestjs/common';
@@ -6,10 +7,12 @@ import { Injectable } from '@nestjs/common';
 export class BlockChainService {
   private difficulty: number;
   private readonly chain: Block[] = [];
-  constructor() {
+  private prisma: PrismaService;
+  constructor(prisma: PrismaService) {
     const genesisBlock: Block = new Block(0, new Date(), 'Genesis block');
     this.chain.push(genesisBlock);
     this.difficulty = 0;
+    this.prisma = prisma;
   }
   getLastBlock() {
     return this.chain[this.chain.length - 1];
@@ -27,6 +30,8 @@ export class BlockChainService {
   }
 
   getBlockByHash(hash: string): Block | undefined {
+    const block = this.prisma.message.findFirst({ where: { blockHash: hash } });
+    console.log(block);
     return this.chain.find((block) => block.hash === hash);
   }
 

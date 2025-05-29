@@ -112,6 +112,7 @@ export class ChatroomResolver {
       context.req.user.sub,
       imagePath,
     );
+    console.log(newMessage);
     await this.pubSub
       .publish(`newMessage.${chatroomId}`, { newMessage })
       .then((res) => {
@@ -121,6 +122,23 @@ export class ChatroomResolver {
         console.log('err', err);
       });
 
+    const aiMessage = await this.chatroomService.aiSendMessage(
+      chatroomId,
+      content,
+      context.req.user.sub,
+      imagePath,
+    );
+
+    if (aiMessage) {
+      await this.pubSub
+        .publish(`newMessage.${chatroomId}`, { newMessage: aiMessage })
+        .then((res) => {
+          console.log('published', res);
+        })
+        .catch((err) => {
+          console.log('err', err);
+        });
+    }
     return newMessage;
   }
 
@@ -155,5 +173,9 @@ export class ChatroomResolver {
   async deleteChatroom(@Args('chatroomId') chatroomId: number) {
     await this.chatroomService.deleteChatroom(chatroomId);
     return 'Chatroom deleted successfully';
+  }
+
+  async publishAnalyzedMessage(message: Message) {
+    await this.pubSub.publish('messageAnalyzed', message);
   }
 }

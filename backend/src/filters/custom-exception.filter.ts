@@ -9,7 +9,8 @@ export class GraphQLErrorFilter implements GqlExceptionFilter {
 
     if (typeof response === 'object') {
       // Directly throw ApolloError with the response object.
-      throw new ApolloError('Validation error', 'VALIDATION_ERROR', response);
+      console.log(response);
+      throw new BadRequestException(response);
     } else {
       throw new ApolloError('Bad Request');
     }

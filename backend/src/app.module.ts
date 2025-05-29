@@ -14,6 +14,8 @@ import { ChatroomModule } from './chatroom/chatroom.module';
 import { LiveChatroomModule } from './live-chatroom/live-chatroom.module';
 import { AiService } from './ai/ai.service';
 import { AiModule } from './ai/ai.module';
+import { AnomalyModule } from './anomaly/anomaly.module';
+import { ScheduleModule } from '@nestjs/schedule';
 const pubSub = new RedisPubSub({
   connection: {
     host: process.env.REDIS_HOST || 'localhost',
@@ -32,8 +34,10 @@ const pubSub = new RedisPubSub({
       serveRoot: '/',
     }),
     AiModule,
+    AnomalyModule,
     AuthModule,
     UserModule,
+    ScheduleModule.forRoot(),
     GraphQLModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -24,7 +24,7 @@ export class BlockChainServiceChat {
     mineBlock(newBlock, this.difficulty);
     this.chain.push(newBlock);
 
-    // 💾 Зберігаємо в БД
+    //  Зберігаємо в БД
     await this.prisma.block.create({
       data: {
         index: newBlock.index,

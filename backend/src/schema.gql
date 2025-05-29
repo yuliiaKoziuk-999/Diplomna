@@ -37,6 +37,7 @@ type Message {
 
 type Mutation {
   addUsersToChatroom(chatroomId: Float!, userIds: [Float!]!): Chatroom!
+  aiReply(message: String!): String!
   createChatroom(name: String!): Chatroom!
   deleteChatroom(chatroomId: Float!): String!
   enterChatroom(chatroomId: Float!): Boolean!
