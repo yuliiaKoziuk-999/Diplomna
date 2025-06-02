@@ -251,6 +251,9 @@ function Chatwindow() {
 
   useEffect(() => {
     if (data?.getMessagesForChatroom) {
+      console.log(
+        `Data messages ` + JSON.stringify(data.getMessagesForChatroom),
+      );
       setMessages(data.getMessagesForChatroom);
     }
   }, [data?.getMessagesForChatroom]);
@@ -406,6 +409,7 @@ function Chatwindow() {
                 </Text>
               ) : (
                 messages.map(message => {
+                  console.log(`MESSAGE ID ` + message.id);
                   return (
                     <MessageBubble
                       key={message?.id}

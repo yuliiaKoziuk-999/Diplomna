@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql } from "@apollo/client";
 
 export const GET_MESSAGES_FOR_CHATROOM = gql`
   query GetMessagesForChatroom($chatroomId: Float!) {
@@ -7,6 +7,7 @@ export const GET_MESSAGES_FOR_CHATROOM = gql`
       content
       imageUrl
       createdAt
+      isValid
       user {
         id
         fullname
@@ -25,4 +26,4 @@ export const GET_MESSAGES_FOR_CHATROOM = gql`
       }
     }
   }
-`
+`;

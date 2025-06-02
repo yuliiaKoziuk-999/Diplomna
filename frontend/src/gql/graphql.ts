@@ -62,6 +62,7 @@ export type Message = {
   imageUrl?: Maybe<Scalars["String"]["output"]>;
   updatedAt?: Maybe<Scalars["DateTime"]["output"]>;
   user?: Maybe<User>;
+  isValid?: boolean;
 };
 
 export type Mutation = {
@@ -409,6 +410,7 @@ export type GetMessagesForChatroomQuery = {
     content?: string | null;
     imageUrl?: string | null;
     createdAt?: any | null;
+    isValid?: boolean;
     user?: {
       __typename?: "User";
       id?: number | null;
