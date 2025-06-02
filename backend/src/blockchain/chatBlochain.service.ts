@@ -13,10 +13,14 @@ export class BlockChainServiceChat {
     private readonly blockchainService: BlockChainService,
   ) {}
 
-  async addMessage(data: { sender: string; message: string }): Promise<Block> {
-    const previousBlock = this.blockchainService.getLastBlock();
+  async addMessage(data: {
+    sender: string;
+    message: string;
+    messageId: number;
+  }): Promise<Block> {
+    const previousBlock = await this.blockchainService.getLastBlock();
     const newBlock = new Block(
-      previousBlock.index + 1,
+      previousBlock.id + 1,
       new Date(),
       data,
       previousBlock.hash,
@@ -29,18 +33,16 @@ export class BlockChainServiceChat {
       data: {
         index: newBlock.index,
         timestamp: new Date(newBlock.timestamp),
-        sender: data.sender,
-        message: data.message,
+        messageId: data.messageId,
         previousHash: newBlock.previousHash,
         hash: newBlock.hash,
-        nonce: newBlock.nonce,
       },
     });
 
     return newBlock;
   }
 
-  async getAll(): Promise<Block[]> {
+  async getAll() {
     const dbBlocks = await this.prisma.block.findMany({
       orderBy: { index: 'asc' },
     });

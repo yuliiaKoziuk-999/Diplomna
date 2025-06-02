@@ -16,6 +16,7 @@ import { AiService } from './ai/ai.service';
 import { AiModule } from './ai/ai.module';
 import { AnomalyModule } from './anomaly/anomaly.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RedisModule } from '@nestjs-modules/ioredis';
 const pubSub = new RedisPubSub({
   connection: {
     host: process.env.REDIS_HOST || 'localhost',
@@ -33,6 +34,7 @@ const pubSub = new RedisPubSub({
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/',
     }),
+    RedisModule,
     AiModule,
     AnomalyModule,
     AuthModule,

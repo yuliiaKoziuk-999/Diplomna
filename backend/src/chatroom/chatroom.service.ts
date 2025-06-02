@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Message, Prisma } from '@prisma/client';
 import { createWriteStream } from 'fs';
 import { BadRequestError } from 'openai';
 import { AiService } from 'src/ai/ai.service';
 import { AnomalyService } from 'src/anomaly/anomaly.service';
 import { BlockChainService } from 'src/blockchain/block-chain.service';
 import { PrismaService } from 'src/prisma.service';
+import { json } from 'stream/consumers';
 
 @Injectable()
 export class ChatroomService {
@@ -142,26 +144,12 @@ export class ChatroomService {
     const blockData = {
       chatroomId,
       userId,
-      message,
-      imagePath,
-      timestamp: new Date().toISOString(),
+      content: message,
+      imageUrl: imagePath,
     };
 
     // Додаємо блок у блокчейн
-    const newBlock = this.blockchainService.addBlock(blockData);
-
-    // Зберігаємо повідомлення в БД, включаючи хеш блоку
-    const savedMessage = await this.prisma.message.create({
-      data: {
-        chatroomId,
-        userId,
-        content: message,
-        imageUrl: imagePath,
-        createdAt: new Date(),
-        blockHash: newBlock.hash,
-      },
-      include: { user: true, chatroom: { include: { users: true } } },
-    });
+    const savedMessage = await this.blockchainService.addBlock(blockData);
 
     return savedMessage;
   }
@@ -184,24 +172,12 @@ export class ChatroomService {
       const aiBlockData = {
         chatroomId,
         userId: this.aiUserId, // ID системного користувача (AI)
-        message: aiResponse,
-        imagePath: '',
-        timestamp: new Date().toISOString(),
+        content: aiResponse,
+        imageUrl: '',
       };
       try {
-        const aiBlock = this.blockchainService.addBlock(aiResponse);
+        const aiMessage = this.blockchainService.addBlock(aiBlockData);
 
-        const aiMessage = await this.prisma.message.create({
-          data: {
-            chatroomId,
-            userId: this.aiUserId, // AI user ID
-            content: aiResponse,
-            imageUrl: '',
-            createdAt: new Date(),
-            blockHash: aiBlock.hash,
-          },
-          include: { user: true, chatroom: { include: { users: true } } },
-        });
         return aiMessage;
       } catch (error) {
         console.log('ai block ' + JSON.stringify(aiBlockData));
@@ -245,36 +221,44 @@ export class ChatroomService {
 
   async getMessagesForChatroom(chatroomId: number) {
     console.log(`you entered in the chat!!!!`);
-    const messages = await this.prisma.message.findMany({
-      where: {
-        chatroomId: chatroomId,
-      },
-      include: {
-        chatroom: {
-          include: {
-            users: {
-              orderBy: {
-                createdAt: 'asc',
-              },
-            }, // Eager loading users
-          },
-        }, // Eager loading Chatroom
-        user: true, // Eager loading User
-      },
-    });
-    console.log(messages, chatroomId + 'chatroom and messages');
+    const messages: (Message & { isValid?: boolean })[] =
+      await this.prisma.message.findMany({
+        where: {
+          chatroomId: chatroomId,
+        },
+        include: {
+          chatroom: {
+            include: {
+              users: {
+                orderBy: {
+                  createdAt: 'asc',
+                },
+              }, // Eager loading users
+            },
+          }, // Eager loading Chatroom
+          user: true, // Eager loading User
+        },
+      });
 
     for (const msg of messages) {
-      const block = this.blockchainService.getBlockByHash(msg.blockHash);
-      console.log(block + 'block');
-      if (!block || !this.blockchainService.validateBlockData(block, msg)) {
-        console.log(`!!Message integrity compromised for message ID ${msg.id}`);
-        // throw new BadRequestException(
-        //   `Message integrity compromised for message ID ${msg.id}`,
-        // );
+      console.log(`BEFORE` + JSON.stringify(msg));
+      const block = await this.blockchainService.getBlockByHash(msg.blockHash);
+      console.log(`AFTER ` + JSON.stringify(block));
+      let isValid = false;
+      if (block) {
+        isValid = await this.blockchainService.validateBlockData(block.id);
       }
-    }
 
+      console.log(`!!!BLOCK: ${JSON.stringify(block)}`);
+      // if (!block || !this.blockchainService.validateBlockData(block, msg)) {
+      //   console.log(`!!Message integrity compromised for message ID ${msg.id}`);
+      //   // throw new BadRequestException(
+      //   //   `Message integrity compromised for message ID ${msg.id}`,
+      //   // );
+      // }
+      msg.isValid = isValid;
+    }
+    console.log(`THIS MESSAGES ` + JSON.stringify(messages));
     return messages;
   }
   async deleteChatroom(chatroomId: number) {

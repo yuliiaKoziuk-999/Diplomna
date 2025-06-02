@@ -8,6 +8,8 @@ import { BlockChainService } from 'src/blockchain/block-chain.service';
 import { ConfigModule } from '@nestjs/config';
 import { AiModule } from 'src/ai/ai.module';
 import { AnomalyService } from 'src/anomaly/anomaly.service';
+import Redis from 'ioredis';
+import { RedisService } from 'src/redis/redis.service';
 
 @Module({
   imports: [ConfigModule, AiModule],
@@ -19,6 +21,7 @@ import { AnomalyService } from 'src/anomaly/anomaly.service';
     JwtService,
     BlockChainService,
     AnomalyService,
+    RedisService,
   ],
 })
 export class ChatroomModule {}

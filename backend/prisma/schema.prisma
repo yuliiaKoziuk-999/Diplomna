@@ -43,6 +43,18 @@ model Message {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatroom   Chatroom @relation(fields: [chatroomId], references: [id], onDelete: Cascade)
   blockHash String?
+
+  Block Block?
+}
+
+model Block {
+  id           Int      @id @default(autoincrement())
+  index        Int
+  timestamp    DateTime
+  previousHash String
+  hash         String
+  message      Message  @relation(fields: [messageId], references: [id])
+  messageId    Int       @unique
 }
 
 model ChatroomUsers {

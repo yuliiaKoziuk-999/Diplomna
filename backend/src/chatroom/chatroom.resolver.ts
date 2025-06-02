@@ -17,6 +17,7 @@ import { PubSub } from 'graphql-subscriptions';
 import { User } from 'src/user/user.type';
 
 import * as GraphQLUpload from 'graphql-upload/GraphQLUpload.js';
+import { data } from '@tensorflow/tfjs';
 
 @Resolver()
 export class ChatroomResolver {

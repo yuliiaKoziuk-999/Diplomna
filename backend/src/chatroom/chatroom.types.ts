@@ -39,11 +39,14 @@ export class Message {
   @Field({ nullable: true })
   updatedAt?: Date;
 
-  @Field(() => Chatroom, { nullable: true }) // array of user IDs
+  @Field(() => Chatroom, { nullable: true })
   chatroom?: Chatroom;
 
-  @Field(() => User, { nullable: true }) // array of user IDs
+  @Field(() => User, { nullable: true })
   user?: User;
+
+  @Field({ nullable: true })
+  isValid?: boolean;
 }
 
 @ObjectType()

@@ -31,6 +31,7 @@ type Message {
   createdAt: DateTime
   id: ID
   imageUrl: String
+  isValid: Boolean
   updatedAt: DateTime
   user: User
 }
