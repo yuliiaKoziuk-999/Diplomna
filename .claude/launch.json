@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "backend", "run", "start"],
+      "port": 3000
+    },
+    {
+      "name": "search-backend",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", "backend", "ts-node", "-T", "-P", "backend/tsconfig.json", "backend/src/verifiable-search-demo.main.ts"],
+      "port": 3000
+    }
+  ]
+}
