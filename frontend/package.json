@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e:demo": "playwright test e2e/demo.spec.ts --project=demo",
+    "e2e:watch": "playwright test e2e/demo.spec.ts --project=watch"
   },
   "dependencies": {
     "@apollo/client": "^3.8.1",
@@ -25,12 +27,14 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.15.0",
     "subscriptions-transport-ws": "^0.11.0",
+    "verification-sdk": "file:../verification-sdk",
     "zustand": "^4.4.1"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/client-preset": "^4.1.0",
     "@parcel/watcher": "^2.3.0",
+    "@playwright/test": "^1.63.0",
     "@types/apollo-upload-client": "^17.0.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",

@@ -17,7 +17,9 @@ import {
   IconBrandMessenger,
   IconBrandWechat,
   IconLogin,
+  IconCreditCard,
 } from "@tabler/icons-react"
+import { useNavigate } from "react-router-dom"
 import { useMutation } from "@apollo/client"
 import { LOGOUT_USER } from "../graphql/mutations/Logout"
 
@@ -83,6 +85,7 @@ function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
 const mockdata = [{ icon: IconBrandWechat, label: "Chatrooms" }]
 
 function Sidebar() {
+  const navigate = useNavigate()
   const toggleProfileSettingsModal = useGeneralStore(
     (state) => state.toggleProfileSettingsModal
   )
@@ -129,6 +132,13 @@ function Sidebar() {
       </Navbar.Section>
       <Navbar.Section>
         <Stack justify="center" spacing={0}>
+          {userId && (
+            <NavbarLink
+              icon={IconCreditCard}
+              label="Кабінет і тарифи"
+              onClick={() => navigate("/account")}
+            />
+          )}
           {userId && (
             <NavbarLink
               icon={IconUser}

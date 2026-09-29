@@ -17,6 +17,10 @@ import { AiModule } from './ai/ai.module';
 import { AnomalyModule } from './anomaly/anomaly.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { DatabaseModule } from './database/database.module';
+import { VerifiableSearchModule } from './verifiable-search/verifiable-search.module';
+import { BillingModule } from './billing/billing.module';
+import { AnchorApiModule } from './anchor-api/anchor-api.module';
 const pubSub = new RedisPubSub({
   connection: {
     host: process.env.REDIS_HOST || 'localhost',
@@ -34,6 +38,11 @@ const pubSub = new RedisPubSub({
       rootPath: join(__dirname, '..', 'public'),
       serveRoot: '/',
     }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
+    }),
+    DatabaseModule,
     RedisModule,
     AiModule,
     AnomalyModule,
@@ -79,11 +88,11 @@ const pubSub = new RedisPubSub({
         };
       },
     }),
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
     ChatroomModule,
     LiveChatroomModule,
+    VerifiableSearchModule,
+    BillingModule,
+    AnchorApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

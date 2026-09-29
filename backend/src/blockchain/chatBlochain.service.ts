@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { InjectModel } from '@nestjs/sequelize';
 import { BlockChainService } from './block-chain.service';
 import { Block } from './block';
+import { Block as BlockModel } from './block.model';
 import { mineBlock } from './mineBlock';
 
 @Injectable()
@@ -9,7 +10,7 @@ export class BlockChainServiceChat {
   chain: any;
   difficulty: number;
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectModel(BlockModel) private readonly blockModel: typeof BlockModel,
     private readonly blockchainService: BlockChainService,
   ) {}
 
@@ -29,22 +30,20 @@ export class BlockChainServiceChat {
     this.chain.push(newBlock);
 
     //  Зберігаємо в БД
-    await this.prisma.block.create({
-      data: {
-        index: newBlock.index,
-        timestamp: new Date(newBlock.timestamp),
-        messageId: data.messageId,
-        previousHash: newBlock.previousHash,
-        hash: newBlock.hash,
-      },
+    await this.blockModel.create({
+      index: newBlock.index,
+      timestamp: new Date(newBlock.timestamp),
+      messageId: data.messageId,
+      previousHash: newBlock.previousHash,
+      hash: newBlock.hash,
     });
 
     return newBlock;
   }
 
   async getAll() {
-    const dbBlocks = await this.prisma.block.findMany({
-      orderBy: { index: 'asc' },
+    const dbBlocks = await this.blockModel.findAll({
+      order: [['index', 'ASC']],
     });
     return dbBlocks;
   }

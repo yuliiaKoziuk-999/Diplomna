@@ -1,0 +1,17 @@
+/*
+ * index.css (chat app) makes <body> a flex row and forces `* { font-size: 16px }`.
+ * Undo both for the product pages only, so the chat UI keeps its look.
+ */
+/* Block layout, so #root spans the page and Mantine's portals (modals) don't sit beside it. */
+body:has(.ap-shell) {
+  display: block;
+}
+
+/* :where() keeps specificity at zero: beats index.css's `*` (loaded earlier), never Mantine's classes. */
+:where(.ap-shell) * {
+  font-size: inherit;
+}
+
+.ap-shell {
+  font-size: 16px;
+}

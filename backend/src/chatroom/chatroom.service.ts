@@ -1,19 +1,22 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Message, Prisma } from '@prisma/client';
+import { InjectModel } from '@nestjs/sequelize';
 import { createWriteStream } from 'fs';
-import { BadRequestError } from 'openai';
 import { AiService } from 'src/ai/ai.service';
 import { AnomalyService } from 'src/anomaly/anomaly.service';
 import { BlockChainService } from 'src/blockchain/block-chain.service';
-import { PrismaService } from 'src/prisma.service';
-import { json } from 'stream/consumers';
+import { Chatroom } from './chatroom.model';
+import { Message } from './message.model';
+import { User } from 'src/user/user.model';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class ChatroomService {
   private aiUserId = 100001;
   constructor(
-    private readonly prisma: PrismaService,
+    @InjectModel(Chatroom) private readonly chatroomModel: typeof Chatroom,
+    @InjectModel(Message) private readonly messageModel: typeof Message,
+    @InjectModel(User) private readonly userModel: typeof User,
     private readonly configService: ConfigService,
     private readonly blockchainService: BlockChainService,
     private readonly aiService: AiService,
@@ -21,115 +24,61 @@ export class ChatroomService {
   ) {}
 
   async getChatroom(id: string) {
-    return this.prisma.chatroom.findUnique({
-      where: {
-        id: parseInt(id),
-      },
-    });
+    return this.chatroomModel.findByPk(parseInt(id));
   }
 
   async createChatroom(name: string, sub: number) {
-    const existingChatroom = await this.prisma.chatroom.findFirst({
+    const existingChatroom = await this.chatroomModel.findOne({
       where: { name },
     });
     if (existingChatroom) {
       throw new BadRequestException({ name: 'Chatroom already exists' });
     }
-    const chat = await this.prisma.chatroom.create({
-      data: {
-        name,
-        users: {
-          connect: [
-            {
-              id: sub,
-            },
-            {
-              id: this.aiUserId,
-            },
-          ],
-        },
-      },
-    });
+    const chat = await this.chatroomModel.create({ name });
+    await chat.addUsers([sub, this.aiUserId]);
 
     return chat;
   }
 
   async addUsersToChatroom(chatroomId: number, userIds: number[]) {
-    const existingChatroom = await this.prisma.chatroom.findUnique({
-      where: { id: chatroomId },
-    });
+    const existingChatroom = await this.chatroomModel.findByPk(chatroomId);
     if (!existingChatroom) {
       throw new BadRequestException({ chatroomId: 'Chatroom does not exist' });
     }
 
-    return await this.prisma.chatroom.update({
-      where: { id: chatroomId },
-      data: {
-        users: {
-          connect: userIds.map((id) => ({ id })),
-        },
-      },
-      include: {
-        users: true,
-      },
+    await existingChatroom.addUsers(userIds);
+
+    return this.chatroomModel.findByPk(chatroomId, {
+      include: [{ model: User, as: 'users' }],
     });
   }
 
   async getChatroomsForUser(userId: number) {
-    return this.prisma.chatroom.findMany({
+    const membership = await this.userModel.findByPk(userId, {
+      include: [{ model: Chatroom, as: 'chatrooms', attributes: ['id'] }],
+    });
+    const chatroomIds = membership?.chatrooms.map((chatroom) => chatroom.id) ?? [];
+    if (chatroomIds.length === 0) {
+      return [];
+    }
+
+    return this.chatroomModel.findAll({
       where: {
-        users: {
-          some: { id: userId },
-        },
+        id: { [Op.in]: chatroomIds },
       },
-      include: {
-        users: {
-          orderBy: {
-            createdAt: 'desc',
-          },
+      include: [
+        { model: User, as: 'users' },
+        {
+          model: Message,
+          as: 'messages',
+          separate: true,
+          limit: 1,
+          order: [['createdAt', 'DESC']],
         },
-        messages: {
-          take: 1,
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-      },
+      ],
+      order: [[{ model: User, as: 'users' }, 'createdAt', 'DESC']],
     });
   }
-
-  // async sendMessage(
-  //   chatroomId: number,
-  //   message: string,
-  //   userId: number,
-  //   imagePath: string,
-  // ) {
-  //   const blockData = {
-  //     chatroomId,
-  //     userId,
-  //     message,
-  //     imagePath,
-  //     timestamp: new Date().toISOString(),
-  //   };
-
-  //   // Додаємо блок у блокчейн
-  //   const newBlock = this.blockchainService.addBlock(blockData);
-
-  //   // Зберігаємо повідомлення в БД, включаючи хеш блоку
-  //   const savedMessage = await this.prisma.message.create({
-  //     data: {
-  //       chatroomId,
-  //       userId,
-  //       content: message,
-  //       imageUrl: imagePath,
-  //       createdAt: new Date(),
-  //       blockHash: newBlock.hash, // переконайся, що ця колонка є в схемі
-  //     },
-  //     include: { user: true, chatroom: { include: { users: true } } },
-  //   });
-
-  //   return savedMessage;
-  // }
 
   async sendMessage(
     chatroomId: number,
@@ -213,31 +162,29 @@ export class ChatroomService {
     return imagePath;
   }
 
-  // async sForChatroom(chatroomId: number) {
-  //   return this.blockchainService
-  //     .getAll()
-  //     .filter((block) => block.data.chatroomId === chatroomId);
-  // }
-
   async getMessagesForChatroom(chatroomId: number) {
     console.log(`you entered in the chat!!!!`);
     const messages: (Message & { isValid?: boolean })[] =
-      await this.prisma.message.findMany({
+      await this.messageModel.findAll({
         where: {
           chatroomId: chatroomId,
         },
-        include: {
-          chatroom: {
-            include: {
-              users: {
-                orderBy: {
-                  createdAt: 'asc',
-                },
-              }, // Eager loading users
-            },
+        include: [
+          {
+            model: Chatroom,
+            as: 'chatroom',
+            include: [{ model: User, as: 'users' }], // Eager loading users
           }, // Eager loading Chatroom
-          user: true, // Eager loading User
-        },
+          { model: User, as: 'user' }, // Eager loading User
+        ],
+        order: [
+          [
+            { model: Chatroom, as: 'chatroom' },
+            { model: User, as: 'users' },
+            'createdAt',
+            'ASC',
+          ],
+        ],
       });
 
     for (const msg of messages) {
@@ -250,20 +197,12 @@ export class ChatroomService {
       }
 
       console.log(`!!!BLOCK: ${JSON.stringify(block)}`);
-      // if (!block || !this.blockchainService.validateBlockData(block, msg)) {
-      //   console.log(`!!Message integrity compromised for message ID ${msg.id}`);
-      //   // throw new BadRequestException(
-      //   //   `Message integrity compromised for message ID ${msg.id}`,
-      //   // );
-      // }
       msg.isValid = isValid;
     }
     console.log(`THIS MESSAGES ` + JSON.stringify(messages));
     return messages;
   }
   async deleteChatroom(chatroomId: number) {
-    return this.prisma.chatroom.delete({
-      where: { id: chatroomId },
-    });
+    return this.chatroomModel.destroy({ where: { id: chatroomId } });
   }
 }

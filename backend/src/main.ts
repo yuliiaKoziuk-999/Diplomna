@@ -1,3 +1,6 @@
+import { config as loadEnv } from 'dotenv';
+// .env.local (git-ignored) holds payment keys and wins over the committed .env
+loadEnv({ path: ['.env.local', '.env'] });
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as cookieParser from 'cookie-parser';
@@ -6,9 +9,10 @@ import * as graphqlUploadExpress from 'graphql-upload/graphqlUploadExpress.js';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: Stripe webhook signatures are computed over the exact bytes sent
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
     credentials: true,
     // all headers that client are allowed to use
     allowedHeaders: [

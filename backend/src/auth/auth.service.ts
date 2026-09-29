@@ -4,17 +4,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma.service';
+import { InjectModel } from '@nestjs/sequelize';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
-import { User } from '@prisma/client';
+import { User } from '../user/user.model';
 import { LoginDto, RegisterDto } from './dto';
 import * as bcrypt from 'bcrypt';
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly prisma: PrismaService,
+    @InjectModel(User) private readonly userModel: typeof User,
     private readonly configService: ConfigService,
   ) {}
 
@@ -33,9 +33,7 @@ export class AuthService {
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
-    const userExists = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-    });
+    const userExists = await this.userModel.findByPk(payload.sub);
 
     if (!userExists) {
       throw new BadRequestException('User no longer exists');
@@ -76,7 +74,7 @@ export class AuthService {
   }
 
   async validateUser(loginDto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.userModel.findOne({
       where: { email: loginDto.email },
     });
     if (user && (await bcrypt.compare(loginDto.password, user.password))) {
@@ -85,19 +83,17 @@ export class AuthService {
     return null;
   }
   async register(registerDto: RegisterDto, response: Response) {
-    const existingUser = await this.prisma.user.findUnique({
+    const existingUser = await this.userModel.findOne({
       where: { email: registerDto.email },
     });
     if (existingUser) {
       throw new BadRequestException({ email: 'Email already in use' });
     }
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        fullname: registerDto.fullname,
-        password: hashedPassword,
-        email: registerDto.email,
-      },
+    const user = await this.userModel.create({
+      fullname: registerDto.fullname,
+      password: hashedPassword,
+      email: registerDto.email,
     });
     return this.issueTokens(user, response);
   }

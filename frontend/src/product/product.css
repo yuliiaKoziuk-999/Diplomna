@@ -1,0 +1,55 @@
+.ap-canvas {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: block;
+  border-radius: 8px;
+  background: #f4f6f3;
+  cursor: crosshair;
+  touch-action: manipulation;
+}
+
+.ap-cells { display: flex; flex-wrap: wrap; gap: 2px; }
+.ap-cell { width: 12px; height: 17px; border-radius: 2px; background: #e7ece6; border: 1px solid transparent; display: inline-block; }
+.ap-cell.rev { background: #fbe3c7; border-color: #d9480f; }
+.ap-cell.bnd { background: #fff; border: 1px dashed #d9480f; }
+.ap-cell.res { background: #d9480f; }
+.ap-cell.hid { background: #c92a2a; }
+
+.ap-receipt {
+  background: #fbfaf6;
+  color: #1e2328;
+  font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 22px 20px 26px;
+  position: relative;
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.35);
+  transform: rotate(1.2deg);
+  max-width: 380px;
+  width: 100%;
+  justify-self: center;
+}
+.ap-receipt::before,
+.ap-receipt::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: radial-gradient(circle at 5px 0, transparent 5px, #fbfaf6 5.5px) 0 0 / 10px 10px repeat-x;
+}
+.ap-receipt::before { top: -9px; transform: rotate(180deg); }
+.ap-receipt::after { bottom: -9px; }
+.ap-receipt .rh { text-align: center; font-weight: 500; letter-spacing: 0.12em; border-bottom: 1px dashed #9aa0a6; padding-bottom: 8px; margin-bottom: 8px; }
+.ap-receipt .row { display: flex; justify-content: space-between; gap: 10px; }
+.ap-receipt .row span:last-child { text-align: right; word-break: break-all; }
+.ap-receipt hr { border: none; border-top: 1px dashed #9aa0a6; margin: 8px 0; }
+.ap-receipt .stamp { margin-top: 10px; text-align: center; font-weight: 500; color: #2c7a4c; border: 2px solid #2c7a4c; border-radius: 4px; padding: 4px; letter-spacing: 0.1em; }
+
+.ap-bar-track { position: relative; height: 24px; background: #edf0ec; border-radius: 4px; }
+.ap-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.ap-bar-val { position: absolute; top: 50%; transform: translateY(-50%); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-receipt { transform: none; }
+}

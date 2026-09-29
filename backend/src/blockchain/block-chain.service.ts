@@ -1,25 +1,31 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { InjectModel } from '@nestjs/sequelize';
 import { mineBlock } from './mineBlock';
-import { Block } from './block'; // Цей клас повинен мати метод calculateHash()
-import { json } from 'stream/consumers';
+import { Block as BlockchainBlock } from './block'; // Цей клас повинен мати метод calculateHash()
+import { Block } from './block.model';
+import { Message } from 'src/chatroom/message.model';
+import { User } from 'src/user/user.model';
+import { Chatroom } from 'src/chatroom/chatroom.model';
 
 @Injectable()
 export class BlockChainService {
   private difficulty = 0;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectModel(Block) private readonly blockModel: typeof Block,
+    @InjectModel(Message) private readonly messageModel: typeof Message,
+  ) {}
 
   async getLastBlock() {
-    return this.prisma.block.findFirst({
-      orderBy: { index: 'desc' },
+    return this.blockModel.findOne({
+      order: [['index', 'DESC']],
     });
   }
 
   async getAll() {
-    return this.prisma.block.findMany({
-      orderBy: { index: 'asc' },
-      include: { message: true },
+    return this.blockModel.findAll({
+      order: [['index', 'ASC']],
+      include: [{ model: Message, as: 'message' }],
     });
   }
 
@@ -47,46 +53,56 @@ export class BlockChainService {
       imagePath: imageUrl,
       timestamp: new Date().toISOString(),
     };
-    const tempBlock = new Block(index, timestamp, blockData, previousHash);
+    const tempBlock = new BlockchainBlock(
+      index,
+      timestamp,
+      blockData,
+      previousHash,
+    );
     mineBlock(tempBlock, this.difficulty);
-    const message = await this.prisma.message.create({
-      data: {
-        chatroomId,
-        userId,
-        content,
-        imageUrl,
-        createdAt: new Date(),
-        blockHash: tempBlock.hash,
-      },
-      include: { user: true, chatroom: { include: { users: true } } },
+    const createdMessage = await this.messageModel.create({
+      chatroomId,
+      userId,
+      content,
+      imageUrl,
+      createdAt: new Date(),
+      blockHash: tempBlock.hash,
     });
 
-    if (!message) throw new Error('Message not found');
+    if (!createdMessage) throw new Error('Message not found');
 
-    const newBlock = await this.prisma.block.create({
-      data: {
-        index,
-        timestamp,
-        previousHash,
-        hash: tempBlock.hash,
-        messageId: message.id,
-      },
+    await this.blockModel.create({
+      index,
+      timestamp,
+      previousHash,
+      hash: tempBlock.hash,
+      messageId: createdMessage.id,
+    });
+
+    const message = await this.messageModel.findByPk(createdMessage.id, {
+      include: [
+        { model: User, as: 'user' },
+        {
+          model: Chatroom,
+          as: 'chatroom',
+          include: [{ model: User, as: 'users' }],
+        },
+      ],
     });
 
     return message;
   }
 
   async getBlockByHash(hash: string) {
-    return this.prisma.block.findFirst({
+    return this.blockModel.findOne({
       where: { hash },
-      include: { message: true },
+      include: [{ model: Message, as: 'message' }],
     });
   }
 
   async validateBlockData(blockId: number): Promise<boolean> {
-    const block = await this.prisma.block.findUnique({
-      where: { id: blockId },
-      include: { message: true },
+    const block = await this.blockModel.findByPk(blockId, {
+      include: [{ model: Message, as: 'message' }],
     });
 
     if (!block || !block.message) {
@@ -106,7 +122,7 @@ export class BlockChainService {
       timestamp: createdAt.toISOString(),
     };
 
-    const virtualBlock = new Block(
+    const virtualBlock = new BlockchainBlock(
       block.index,
       block.timestamp,
       data,
@@ -122,7 +138,7 @@ export class BlockChainService {
     let isPreviousHashValid = true;
 
     if (block.index > 0) {
-      const previousBlock = await this.prisma.block.findFirst({
+      const previousBlock = await this.blockModel.findOne({
         where: { index: block.index - 1 },
       });
 
@@ -161,7 +177,7 @@ export class BlockChainService {
         timestamp: current.message.createdAt.toISOString(),
       };
 
-      const virtualBlock = new Block(
+      const virtualBlock = new BlockchainBlock(
         current.index,
         current.timestamp,
         data,
